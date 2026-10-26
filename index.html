@@ -60,7 +60,7 @@
                 <i data-lucide="network" class="w-8 h-8 text-indigo-200"></i>
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">Gerador de Mapa CGNAT</h1>
-                    <p class="text-xs text-indigo-200">Mapeamento Deterministico / Fixed-NAT</p>
+                    <p class="text-xs text-indigo-200">Mapeamento Determinístico / Fixed-NAT (Multi-Vendor: MikroTik & A10)</p>
                 </div>
             </div>
             <span class="bg-indigo-800 text-indigo-200 text-xs px-3 py-1 rounded-full border border-indigo-600 font-medium hidden sm:inline-block">
@@ -76,33 +76,45 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8 transition-all">
             <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <i data-lucide="sliders" class="w-5 h-5 text-brand-600"></i>
-                Parâmetros de Mapeamento
+                Parâmetros de Mapeamento e Configuração
             </h2>
 
             <form id="cgnatForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
+                <!-- Target Device / Platform -->
+                <div>
+                    <label for="devicePlatform" class="block text-sm font-medium text-slate-700 mb-1">
+                        Plataforma / Equipamento
+                    </label>
+                    <select id="devicePlatform" onchange="togglePlatformFields()" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 text-sm bg-white font-medium">
+                        <option value="mikrotik" selected>MikroTik RouterOS</option>
+                        <option value="a10">A10 Networks (Thunder/AX)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">Sintaxe de regras e scripts gerados.</p>
+                </div>
+
                 <!-- Internal IP / Subnet -->
                 <div>
                     <label for="privateSubnet" class="block text-sm font-medium text-slate-700 mb-1">
-                        Rede Privada (LAN / Network)
+                        Rede Privada CGNAT (LAN)
                     </label>
                     <div class="relative">
                         <input type="text" id="privateSubnet" value="100.64.0.0/18" placeholder="Ex: 100.64.0.0/18" 
                                class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Sua rede interna/CGNAT privada.</p>
+                    <p class="text-xs text-slate-500 mt-1">Sua rede CGNAT interna (RFC 6598 ou 10.x/172.x/192.168.x).</p>
                 </div>
 
                 <!-- Public IP / Subnet -->
                 <div>
                     <label for="publicSubnet" class="block text-sm font-medium text-slate-700 mb-1">
-                        Prefixo Público (WAN / Pool)
+                        Bloco Público / Pool (WAN)
                     </label>
                     <div class="relative">
-                        <input type="text" id="publicSubnet" value="203.0.113.0/24" placeholder="Ex: 203.0.113.0/24" 
+                        <input type="text" id="publicSubnet" value="203.0.113.0/24" placeholder="Ex: 203.0.113.0/24 ou /23, /22..." 
                                class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Seu bloco de IPs públicos válidos.</p>
+                    <p class="text-xs text-slate-500 mt-1">Suporta qualquer máscara CIDR (sem limite /24).</p>
                 </div>
 
                 <!-- Ratio Selection (Clients per Public IP) -->
@@ -119,26 +131,130 @@
                         <option value="128">128 Clientes (~500 portas) *Não Recomendado</option>
                         <option value="256">256 Clientes (~250 portas) *Não Recomendado</option>
                     </select>
-                    <p class="text-xs text-slate-500 mt-1">Razão de compartilhamento de portas.</p>
+                    <p class="text-xs text-slate-500 mt-1">Proporção por IP público público.</p>
                 </div>
 
                 <!-- Starting Port Field -->
                 <div>
                     <label for="startPort" class="block text-sm font-medium text-slate-700 mb-1">
-                        Porta de Início
+                        Porta Inicial
                     </label>
                     <input type="number" id="startPort" value="1024" min="1" max="65535" 
                            class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
-                    <p class="text-xs text-slate-500 mt-1">Início da faixa útil (padrão: 1024).</p>
+                    <p class="text-xs text-slate-500 mt-1">Início da alocação (padrão: 1024).</p>
                 </div>
 
-                <!-- Action Button -->
+                <!-- MikroTik RouterOS Version -->
+                <div class="mtk-field">
+                    <label for="rosVersionSelect" class="block text-sm font-medium text-slate-700 mb-1">
+                        Versão do RouterOS
+                    </label>
+                    <select id="rosVersionSelect" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 text-sm bg-white">
+                        <option value="v7" selected>RouterOS v7 (Recomendado)</option>
+                        <option value="v6">RouterOS v6 (Legado)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">Sintaxe dos comandos e jumpers NAT.</p>
+                </div>
+
+                <!-- Interface CGNAT (LAN / In-Interface Option) -->
+                <div class="mtk-field">
+                    <label for="cgnatInterfaceOption" class="block text-sm font-medium text-slate-700 mb-1">
+                        Interface LAN (In-Interface)
+                    </label>
+                    <div class="grid grid-cols-3 gap-1">
+                        <select id="cgnatInterfaceOption" onchange="dis_able_interface()" class="col-span-1 px-2 py-2 border border-slate-300 rounded-lg shadow-sm text-slate-800 text-xs bg-white">
+                            <option value="n" selected>Não</option>
+                            <option value="s">Sim</option>
+                            <option value="l">Lista</option>
+                        </select>
+                        <input type="text" id="cgnatInterfaceName" placeholder="Ex: vlan10" disabled
+                               class="col-span-2 px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm bg-slate-100">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Filtro de interface/list de entrada no MikroTik.</p>
+                </div>
+
+                <!-- Out-Interface Option (Uplink/WAN) -->
+                <div class="mtk-field">
+                    <label for="uplinkOption" class="block text-sm font-medium text-slate-700 mb-1">
+                        Interface WAN (Out-Interface)
+                    </label>
+                    <div class="grid grid-cols-3 gap-1">
+                        <select id="uplinkOption" onchange="dis_able_uplink()" class="col-span-1 px-2 py-2 border border-slate-300 rounded-lg shadow-sm text-slate-800 text-xs bg-white">
+                            <option value="n" selected>Não</option>
+                            <option value="s">Sim</option>
+                            <option value="l">Lista</option>
+                        </select>
+                        <input type="text" id="uplinkName" placeholder="Ex: ether1-WAN" disabled
+                               class="col-span-2 px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm bg-slate-100">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Interface de saída de internet no MikroTik.</p>
+                </div>
+
+                <!-- Ignore / Bypass Local Subnets -->
+                <div class="mtk-field">
+                    <label for="ignoreOption" class="block text-sm font-medium text-slate-700 mb-1">
+                        Bypass de Tráfego Local
+                    </label>
+                    <div class="grid grid-cols-3 gap-1">
+                        <select id="ignoreOption" onchange="dis_able_ignore()" class="col-span-1 px-2 py-2 border border-slate-300 rounded-lg shadow-sm text-slate-800 text-xs bg-white">
+                            <option value="n">Não</option>
+                            <option value="s" selected>Sim</option>
+                            <option value="l">Lista</option>
+                        </select>
+                        <input type="text" id="ignoreData" value="10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16" placeholder="Ex: 10.0.0.0/8" 
+                               class="col-span-2 px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm">
+                    </div>
+                    <div class="mt-1 flex items-center gap-2">
+                        <input type="checkbox" id="ignoreNoTrack" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <label for="ignoreNoTrack" class="text-xs text-slate-600">Usar action=accept (Bypass) em RAW/NAT</label>
+                    </div>
+                </div>
+
+                <!-- Blackhole Route Option -->
+                <div class="mtk-field">
+                    <label for="blackholeOption" class="block text-sm font-medium text-slate-700 mb-1">
+                        Rota de Blackhole para Bloco Público
+                    </label>
+                    <div class="grid grid-cols-3 gap-1">
+                        <select id="blackholeOption" onchange="dis_able_blackhole()" class="col-span-1 px-2 py-2 border border-slate-300 rounded-lg shadow-sm text-slate-800 text-xs bg-white">
+                            <option value="s" selected>Sim (Blackhole)</option>
+                            <option value="i">Unreachable</option>
+                            <option value="e">Interface</option>
+                            <option value="n">Não Gerar</option>
+                        </select>
+                        <input type="text" id="blackholeInterface" placeholder="Ex: null0 / loopback" disabled
+                               class="col-span-2 px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm bg-slate-100">
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Previne loops de roteamento no MikroTik.</p>
+                </div>
+
+                <!-- Jump Chain Custom Name -->
+                <div class="mtk-field">
+                    <label for="jumpChainName" class="block text-sm font-medium text-slate-700 mb-1">
+                        Nome da Chain CGNAT
+                    </label>
+                    <input type="text" id="jumpChainName" value="CGNAT" placeholder="Ex: CGNAT" 
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm">
+                    <p class="text-xs text-slate-500 mt-1">Cadeia customizada do Firewall NAT no MikroTik.</p>
+                </div>
+
+                <!-- Public Interface in NAT Rules -->
+                <div class="mtk-field">
+                    <label for="publicInterfaceNat" class="block text-sm font-medium text-slate-700 mb-1">
+                        Out-Interface nas Regras Nat Públicas
+                    </label>
+                    <input type="text" id="publicInterfaceNat" placeholder="Ex: ether1-WAN (Opcional)" 
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm">
+                    <p class="text-xs text-slate-500 mt-1">Aplica out-interface em cada regra src-nat individual.</p>
+                </div>
+
+                <!-- Action Buttons -->
                 <div class="md:col-span-2 lg:col-span-4 flex justify-end gap-3 pt-2">
                     <button type="button" id="btnReset" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-100 transition text-sm flex items-center gap-1.5">
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Resetar
                     </button>
                     <button type="submit" class="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow transition text-sm flex items-center gap-2">
-                        <i data-lucide="calculator" class="w-4 h-4"></i> Gerar Mapa
+                        <i data-lucide="calculator" class="w-4 h-4"></i> Gerar Mapa & Script
                     </button>
                 </div>
             </form>
@@ -184,9 +300,19 @@
                 </div>
 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <!-- Tab Switcher -->
+                    <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-xs font-medium text-slate-600">
+                        <button type="button" id="tabBtnTable" onclick="switchViewTab('table')" class="px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm font-semibold transition">
+                            Tabela
+                        </button>
+                        <button type="button" id="tabBtnScript" onclick="switchViewTab('script')" class="px-3 py-1.5 rounded-md hover:text-slate-900 transition flex items-center gap-1">
+                            <i data-lucide="terminal" class="w-3.5 h-3.5"></i> Script
+                        </button>
+                    </div>
+
                     <!-- Search Input -->
-                    <div class="relative w-full sm:w-64">
-                        <input type="text" id="searchInput" placeholder="Ex: 191.7.202.149:10718, IP ou Porta..." 
+                    <div id="searchContainer" class="relative w-full sm:w-64">
+                        <input type="text" id="searchInput" placeholder="Ex: 203.0.113.0:10718, IP ou Porta..." 
                                class="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
                         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
                     </div>
@@ -198,8 +324,8 @@
                 </div>
             </div>
 
-            <!-- Scrollable Table -->
-            <div class="overflow-x-auto max-h-[600px] relative">
+            <!-- Scrollable Table View -->
+            <div id="tableView" class="overflow-x-auto max-h-[600px] relative">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-100 text-slate-600 text-xs uppercase font-semibold sticky top-0 z-20 shadow-sm">
                         <tr>
@@ -314,6 +440,21 @@
             </div>
         </div>
 
+        <!-- Script View Panel -->
+        <div id="scriptView" class="hidden p-4 bg-slate-900 text-slate-100 font-mono text-xs rounded-b-xl border-t border-slate-800 relative">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                    <span id="scriptTitleInfo" class="font-semibold text-slate-200">Script de Configuração</span>
+                </div>
+                <button id="btnCopyScript" onclick="copyScript()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-xs font-sans font-medium flex items-center gap-1.5 shadow transition self-end sm:self-auto">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar Script
+                </button>
+            </div>
+            <textarea id="scriptArea" readonly class="w-full h-96 bg-slate-950 text-emerald-400 p-3 rounded-lg font-mono text-xs focus:outline-none resize-y border border-slate-800"></textarea>
+            <p id="scriptDescription" class="text-[11px] text-slate-400 mt-2"></p>
+        </div>
+
         <!-- Custom Notification Toast -->
         <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
             <i id="toastIcon" data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
@@ -324,7 +465,7 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        Gerador de Mapa de CGNAT Fixed-NAT • Calculadora de Mapeamento Determinístico RFC 6598
+        Gerador de Mapa de CGNAT MikroTik RouterOS (Suporte a múltiplos /24, /23, /22)
     </footer>
 
     <!-- Logic Scripts -->
@@ -333,6 +474,7 @@
         let generatedMapData = [];
         let activeFilteredData = [];
         const RENDER_LIMIT = 2000;
+        let currentTab = 'table';
 
         // Sorting & Column Filtering State
         let currentSort = { column: 'id', direction: 'asc' };
@@ -342,7 +484,7 @@
             privateIp: null
         };
 
-        // Initialize Lucide Icons & Close Menus on outside click
+        // Initialize Lucide Icons & Handlers
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             
@@ -369,7 +511,72 @@
                     }
                 });
             });
+
+            togglePlatformFields();
         });
+
+        // Toggle visibility of fields specific to MikroTik or A10
+        function togglePlatformFields() {
+            const platform = document.getElementById('devicePlatform').value;
+            const mtkFields = document.querySelectorAll('.mtk-field');
+            if (platform === 'mikrotik') {
+                mtkFields.forEach(el => el.classList.remove('hidden'));
+            } else {
+                mtkFields.forEach(el => el.classList.add('hidden'));
+            }
+        }
+
+        // Field Enabling/Disabling Logic
+        function dis_able_interface() {
+            const opt = document.getElementById('cgnatInterfaceOption').value;
+            const input = document.getElementById('cgnatInterfaceName');
+            if (opt === 'n') {
+                input.disabled = true;
+                input.classList.add('bg-slate-100');
+            } else {
+                input.disabled = false;
+                input.classList.remove('bg-slate-100');
+            }
+        }
+
+        function dis_able_uplink() {
+            const opt = document.getElementById('uplinkOption').value;
+            const input = document.getElementById('uplinkName');
+            if (opt === 'n') {
+                input.disabled = true;
+                input.classList.add('bg-slate-100');
+            } else {
+                input.disabled = false;
+                input.classList.remove('bg-slate-100');
+            }
+        }
+
+        function dis_able_ignore() {
+            const opt = document.getElementById('ignoreOption').value;
+            const dataInput = document.getElementById('ignoreData');
+            const chk = document.getElementById('ignoreNoTrack');
+            if (opt === 'n') {
+                dataInput.disabled = true;
+                dataInput.classList.add('bg-slate-100');
+                chk.disabled = true;
+            } else {
+                dataInput.disabled = false;
+                dataInput.classList.remove('bg-slate-100');
+                chk.disabled = false;
+            }
+        }
+
+        function dis_able_blackhole() {
+            const opt = document.getElementById('blackholeOption').value;
+            const input = document.getElementById('blackholeInterface');
+            if (opt === 'e') {
+                input.disabled = false;
+                input.classList.remove('bg-slate-100');
+            } else {
+                input.disabled = true;
+                input.classList.add('bg-slate-100');
+            }
+        }
 
         // Convert IP String to 32-bit Integer
         function ipToInt(ip) {
@@ -386,7 +593,7 @@
             ].join('.');
         }
 
-        // Parse CIDR notation (e.g. "100.64.0.0/18") into start, end, and total count
+        // Parse CIDR notation (e.g. "100.64.0.0/18") into start, end, total count and mask
         function parseCIDR(cidrStr) {
             const cleanCidr = cidrStr.trim();
             const parts = cleanCidr.split('/');
@@ -406,11 +613,12 @@
                 networkIp: intToIp(networkInt),
                 startInt: networkInt,
                 endInt: networkInt + totalIPs - 1,
-                total: totalIPs
+                total: totalIPs,
+                maskBits: maskBits
             };
         }
 
-        // Main Calculation Routine
+        // Map Calculation Logic (Ordering logic: iterates through private block mapped to public IPs & port blocks)
         function calculateCGNATMap() {
             const privateSubnetInput = document.getElementById('privateSubnet').value;
             const publicSubnetInput = document.getElementById('publicSubnet').value;
@@ -430,16 +638,15 @@
                 return;
             }
 
-            // Calculate Available Ports
-            const endPortLimit = 65535;
-            const availablePortsPerIp = endPortLimit - startPort + 1;
+            // Calculation of Ports per User: (65536 - startPort) / ratio
+            const availablePortsPerIp = 65536 - startPort;
             const portsPerUser = Math.floor(availablePortsPerIp / ratio);
 
-            // Compute Total Max Capacity
+            // Max Capacity Calculation
             const maxPrivatesSupported = publicRange.total * ratio;
             const actualPrivateToMap = Math.min(privateRange.total, maxPrivatesSupported);
 
-            // Reset and Build Map Array
+            // Sequential Mappings Generation
             generatedMapData = [];
             let currentPrivInt = privateRange.startInt;
 
@@ -459,7 +666,7 @@
                         publicIpInt: publicRange.startInt + pubIdx,
                         pStart: pStart,
                         pEnd: pEnd,
-                        portRange: `${pStart} - ${pEnd}`,
+                        portRange: `${pStart}-${pEnd}`,
                         privateIp: privIpStr,
                         privateIpInt: currentPrivInt
                     });
@@ -499,9 +706,203 @@
             // Reset search input on recalculation
             document.getElementById('searchInput').value = '';
 
+            // Generate Device Script
+            generateScript();
+
             // Render Table Rows
             applyAllFiltersAndSearch();
-            showToast(`Mapa gerado com ${generatedMapData.length.toLocaleString()} mapeamentos!`, 'check-circle', 'text-emerald-400');
+            showToast(`Mapa gerado com ${generatedMapData.length.toLocaleString()} regras/mapeamentos!`, 'check-circle', 'text-emerald-400');
+        }
+
+        // Tab Switching Logic
+        function switchViewTab(tab) {
+            currentTab = tab;
+            const btnTable = document.getElementById('tabBtnTable');
+            const btnScript = document.getElementById('tabBtnScript');
+            const tableView = document.getElementById('tableView');
+            const scriptView = document.getElementById('scriptView');
+            const searchContainer = document.getElementById('searchContainer');
+            const renderLimitNotice = document.getElementById('renderLimitNotice');
+
+            if (tab === 'table') {
+                btnTable.className = 'px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm font-semibold transition';
+                btnScript.className = 'px-3 py-1.5 rounded-md hover:text-slate-900 transition flex items-center gap-1';
+                tableView.classList.remove('hidden');
+                scriptView.classList.add('hidden');
+                searchContainer.classList.remove('hidden');
+                if (activeFilteredData.length > RENDER_LIMIT) renderLimitNotice.classList.remove('hidden');
+            } else {
+                btnScript.className = 'px-3 py-1.5 rounded-md bg-white text-slate-800 shadow-sm font-semibold transition flex items-center gap-1';
+                btnTable.className = 'px-3 py-1.5 rounded-md hover:text-slate-900 transition';
+                scriptView.classList.remove('hidden');
+                tableView.classList.add('hidden');
+                searchContainer.classList.add('hidden');
+                renderLimitNotice.classList.add('hidden');
+            }
+        }
+
+        // Script Generator for MikroTik and A10
+        function generateScript() {
+            if (!generatedMapData || generatedMapData.length === 0) return;
+
+            const platform = document.getElementById('devicePlatform').value;
+            const privateSubnetInput = document.getElementById('privateSubnet').value;
+            const publicSubnetInput = document.getElementById('publicSubnet').value;
+
+            const scriptArea = document.getElementById('scriptArea');
+            const scriptDesc = document.getElementById('scriptDescription');
+            const scriptTitleInfo = document.getElementById('scriptTitleInfo');
+
+            if (platform === 'mikrotik') {
+                const rosVersion = document.getElementById('rosVersionSelect').value;
+                const cgnatOpt = document.getElementById('cgnatInterfaceOption').value;
+                const cgnatName = document.getElementById('cgnatInterfaceName').value.trim();
+                const uplinkOpt = document.getElementById('uplinkOption').value;
+                const uplinkName = document.getElementById('uplinkName').value.trim();
+                const ignoreOpt = document.getElementById('ignoreOption').value;
+                const ignoreData = document.getElementById('ignoreData').value.trim();
+                const ignoreNoTrack = document.getElementById('ignoreNoTrack').checked;
+                const blackholeOpt = document.getElementById('blackholeOption').value;
+                const blackholeIf = document.getElementById('blackholeInterface').value.trim();
+                const jumpChain = document.getElementById('jumpChainName').value.trim() || 'CGNAT';
+                const publicIfNat = document.getElementById('publicInterfaceNat').value.trim();
+
+                scriptTitleInfo.textContent = `Script RouterOS (${rosVersion.toUpperCase()})`;
+
+                let script = `# ========================================================\n`;
+                script += `# CGNAT DETERMINISTICO PARA MIKROTIK ROUTEROS (${rosVersion.toUpperCase()})\n`;
+                script += `# Rede Privada: ${privateSubnetInput}\n`;
+                script += `# Bloco Público: ${publicSubnetInput}\n`;
+                script += `# Data de Geração: ${new Date().toLocaleString('pt-BR')}\n`;
+                script += `# Total de Mapeamentos: ${generatedMapData.length}\n`;
+                script += `# ========================================================\n\n`;
+
+                // 1. Blackhole Route Setup
+                if (blackholeOpt !== 'n') {
+                    script += `# Rota de Proteção de Loop / Blackhole\n`;
+                    script += `/ip route\n`;
+                    if (blackholeOpt === 's') {
+                        script += `add dst-address=${publicSubnetInput} type=blackhole comment="CGNAT - Blackhole Block"\n`;
+                    } else if (blackholeOpt === 'i') {
+                        script += `add dst-address=${publicSubnetInput} type=unreachable comment="CGNAT - Unreachable Block"\n`;
+                    } else if (blackholeOpt === 'e' && blackholeIf) {
+                        script += `add dst-address=${publicSubnetInput} gateway=${blackholeIf} comment="CGNAT - Null Route"\n`;
+                    }
+                    script += `\n`;
+                }
+
+                // 2. Local Traffic Bypass / Ignore Rules
+                if (ignoreOpt !== 'n' && ignoreData) {
+                    script += `# Regras de Bypass de Tráfego Local\n`;
+                    script += `/ip firewall nat\n`;
+                    const ignoreList = ignoreData.split(',').map(s => s.trim()).filter(Boolean);
+
+                    ignoreList.forEach(pfx => {
+                        let inAttr = '';
+                        if (ignoreOpt === 's' && cgnatName) inAttr = ` in-interface=${cgnatName}`;
+                        else if (ignoreOpt === 'l' && cgnatName) inAttr = ` in-interface-list=${cgnatName}`;
+
+                        script += `add chain=srcnat action=accept dst-address=${pfx} src-address=${privateSubnetInput}${inAttr} comment="CGNAT - Bypass ${pfx}"\n`;
+                    });
+                    script += `\n`;
+                }
+
+                // 3. Main Jump Rule into CGNAT Chain
+                script += `# Regra Jump para direcionar tráfego à Chain CGNAT\n`;
+                script += `/ip firewall nat\n`;
+                let jumpInAttr = '';
+                if (cgnatOpt === 's' && cgnatName) jumpInAttr = ` in-interface=${cgnatName}`;
+                else if (cgnatOpt === 'l' && cgnatName) jumpInAttr = ` in-interface-list=${cgnatName}`;
+
+                let jumpOutAttr = '';
+                if (uplinkOpt === 's' && uplinkName) jumpOutAttr = ` out-interface=${uplinkName}`;
+                else if (uplinkOpt === 'l' && uplinkName) jumpOutAttr = ` out-interface-list=${uplinkName}`;
+
+                script += `add chain=srcnat action=jump jump-target=${jumpChain} src-address=${privateSubnetInput}${jumpInAttr}${jumpOutAttr} comment="CGNAT - Jump to ${jumpChain}"\n\n`;
+
+                // 4. Sequential SRC-NAT Rules (TCP and UDP)
+                script += `# Regras Determinísticas por Usuário/Porta\n`;
+                let extraOut = publicIfNat ? ` out-interface=${publicIfNat}` : '';
+
+                generatedMapData.forEach((item) => {
+                    const disAttr = rosVersion === 'v6' ? ' disabled=no' : '';
+                    script += `add chain=${jumpChain} action=src-nat protocol=tcp src-address=${item.privateIp}${extraOut} to-addresses=${item.publicIp} to-ports=${item.portRange} comment="CGNAT ${item.privateIp}"${disAttr}\n`;
+                    script += `add chain=${jumpChain} action=src-nat protocol=udp src-address=${item.privateIp}${extraOut} to-addresses=${item.publicIp} to-ports=${item.portRange}${disAttr}\n`;
+                });
+
+                scriptDesc.textContent = `* Script de regras sequenciais TCP/UDP otimizado para RouterOS ${rosVersion.toUpperCase()}.`;
+                scriptArea.value = script;
+
+            } else {
+                // A10 Networks CLI Generation
+                scriptTitleInfo.textContent = `Script A10 Networks (Thunder/AX CLI)`;
+
+                let script = `! ========================================================\n`;
+                script += `! CONFIGURACAO CGNAT FIXED-NAT A10 NETWORKS\n`;
+                script += `! Rede Privada: ${privateSubnetInput}\n`;
+                script += `! Bloco Público: ${publicSubnetInput}\n`;
+                script += `! Data: ${new Date().toLocaleString('pt-BR')}\n`;
+                script += `! ========================================================\n\n`;
+
+                script += `cgnv6 nat pool pool-cgnat ${publicSubnetInput}\n`;
+                script += `cgnv6 fixed-nat instance cgnat-inst\n`;
+                script += ` inside-user ipv4 ${privateSubnetInput}\n`;
+                script += ` partition pool-cgnat\n`;
+                script += ` vrid 1\n`;
+
+                scriptDesc.textContent = '* Configuração em bloco sintético para A10 Networks CLI.';
+                scriptArea.value = script;
+            }
+        }
+
+        // Copy Script to Clipboard
+        function copyScript() {
+            const scriptArea = document.getElementById('scriptArea');
+            if (!scriptArea.value) return;
+
+            scriptArea.select();
+            document.execCommand('copy');
+            showToast('Script copiado para a área de transferência!', 'copy', 'text-emerald-400');
+        }
+
+        // Reset Form
+        function resetForm() {
+            document.getElementById('devicePlatform').value = 'mikrotik';
+            document.getElementById('privateSubnet').value = '100.64.0.0/18';
+            document.getElementById('publicSubnet').value = '203.0.113.0/24';
+            document.getElementById('ratioSelect').value = '16';
+            document.getElementById('startPort').value = '1000';
+            document.getElementById('rosVersionSelect').value = 'v7';
+            document.getElementById('cgnatInterfaceOption').value = 'n';
+            document.getElementById('cgnatInterfaceName').value = '';
+            document.getElementById('uplinkOption').value = 'n';
+            document.getElementById('uplinkName').value = '';
+            document.getElementById('ignoreOption').value = 's';
+            document.getElementById('ignoreData').value = '10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16';
+            document.getElementById('ignoreNoTrack').checked = false;
+            document.getElementById('blackholeOption').value = 's';
+            document.getElementById('blackholeInterface').value = '';
+            document.getElementById('jumpChainName').value = 'CGNAT';
+            document.getElementById('publicInterfaceNat').value = '';
+            document.getElementById('searchInput').value = '';
+
+            dis_able_interface();
+            dis_able_uplink();
+            dis_able_ignore();
+            dis_able_blackhole();
+            togglePlatformFields();
+
+            document.getElementById('statsCard').classList.add('hidden');
+            document.getElementById('outputSection').classList.add('hidden');
+            generatedMapData = [];
+            activeFilteredData = [];
+
+            columnFilters = { publicIp: null, portRange: null, privateIp: null };
+            currentSort = { column: 'id', direction: 'asc' };
+            updateFilterIcons();
+            updateSortIcons();
+
+            showToast('Campos reiniciados para os valores padrão.', 'rotate-ccw', 'text-indigo-400');
         }
 
         // Unified Sorting & Filtering Process
@@ -512,7 +913,6 @@
             let result = generatedMapData.filter(item => {
                 if (!query) return true;
 
-                // Case 1: IP:PORT search
                 if (query.includes(':')) {
                     const parts = query.split(':');
                     const searchIp = parts[0].trim();
@@ -525,7 +925,6 @@
                     return matchesIp && matchesPort;
                 }
 
-                // Case 2: Numeric port range lookup
                 const numericValue = parseInt(query, 10);
                 const isNumeric = !isNaN(numericValue) && /^\d+$/.test(query);
 
@@ -550,7 +949,6 @@
                 let valA = a[currentSort.column];
                 let valB = b[currentSort.column];
 
-                // Numeric sorting overrides for IP integers
                 if (currentSort.column === 'publicIp') { valA = a.publicIpInt; valB = b.publicIpInt; }
                 if (currentSort.column === 'privateIp') { valA = a.privateIpInt; valB = b.privateIpInt; }
 
@@ -599,7 +997,6 @@
             const menu = document.getElementById(`filterMenu_${field}`);
             const isHidden = menu.classList.contains('hidden');
 
-            // Close all other menus first
             ['publicIp', 'portRange', 'privateIp'].forEach(f => closeFilterMenu(f));
 
             if (isHidden) {
@@ -620,10 +1017,8 @@
             const searchText = (document.getElementById(`filterSearch_${field}`).value || '').toLowerCase();
             container.innerHTML = '';
 
-            // Unique distinct values for this column from current generated data
             const uniqueValues = Array.from(new Set(generatedMapData.map(item => item[field])));
 
-            // Sort unique values
             if (field === 'publicIp') {
                 uniqueValues.sort((a, b) => ipToInt(a) - ipToInt(b));
             } else if (field === 'privateIp') {
@@ -634,7 +1029,7 @@
 
             const activeSet = columnFilters[field];
 
-            uniqueValues.forEach((val, idx) => {
+            uniqueValues.forEach((val) => {
                 if (searchText && !String(val).toLowerCase().includes(searchText)) return;
 
                 const isChecked = activeSet === null || activeSet.has(val);
@@ -658,14 +1053,12 @@
         // Apply Selected Column Filter
         function applyColumnFilter(field) {
             const cbs = document.querySelectorAll(`.filter-cb-${field}`);
-            const totalCbs = document.querySelectorAll(`[data-field="${field}"]`).length;
             const selectedValues = new Set();
 
             cbs.forEach(cb => {
                 if (cb.checked) selectedValues.add(cb.value);
             });
 
-            // If all checkboxes are selected, set filter to null (no filter active)
             const uniqueValuesCount = new Set(generatedMapData.map(item => item[field])).size;
             if (selectedValues.size === uniqueValuesCount || selectedValues.size === 0) {
                 columnFilters[field] = null;
@@ -692,7 +1085,7 @@
             lucide.createIcons();
         }
 
-        // Render Table Function (with limit protection for DOM performance)
+        // Render Table Rows
         function renderTableRows(data) {
             const tbody = document.getElementById('mapTableBody');
             tbody.innerHTML = '';
@@ -718,10 +1111,8 @@
 
             tbody.appendChild(fragment);
 
-            // Update subtext count
             document.getElementById('tableSubCount').textContent = `Exibindo ${renderCount.toLocaleString()} de ${data.length.toLocaleString()} mapeamentos`;
 
-            // Show or Hide Render Limit Banner
             const limitNotice = document.getElementById('renderLimitNotice');
             if (data.length > RENDER_LIMIT) {
                 limitNotice.classList.remove('hidden');
@@ -729,11 +1120,10 @@
                 limitNotice.classList.add('hidden');
             }
 
-            // Re-initialize Lucide Icons for dynamic content
             lucide.createIcons();
         }
 
-        // CSV Export Function (Exports filtered data if filter/search is active)
+        // CSV Export Function
         function exportToCSV() {
             const dataToExport = activeFilteredData.length > 0 ? activeFilteredData : generatedMapData;
 
@@ -758,27 +1148,6 @@
             document.body.removeChild(link);
 
             showToast('Download do arquivo CSV iniciado!', 'download', 'text-blue-400');
-        }
-
-        // Reset Form
-        function resetForm() {
-            document.getElementById('privateSubnet').value = '100.64.0.0/18';
-            document.getElementById('publicSubnet').value = '203.0.113.0/24';
-            document.getElementById('ratioSelect').value = '64';
-            document.getElementById('startPort').value = '1024';
-            document.getElementById('searchInput').value = '';
-
-            document.getElementById('statsCard').classList.add('hidden');
-            document.getElementById('outputSection').classList.add('hidden');
-            generatedMapData = [];
-            activeFilteredData = [];
-
-            columnFilters = { publicIp: null, portRange: null, privateIp: null };
-            currentSort = { column: 'id', direction: 'asc' };
-            updateFilterIcons();
-            updateSortIcons();
-
-            showToast('Campos reiniciados para os valores padrão.', 'rotate-ccw', 'text-indigo-400');
         }
 
         // Toast Helper
