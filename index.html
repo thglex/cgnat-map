@@ -31,7 +31,6 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom scrollbar for large tables */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -60,7 +59,7 @@
                 <i data-lucide="network" class="w-8 h-8 text-indigo-200"></i>
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">Gerador de Mapa CGNAT</h1>
-                    <p class="text-xs text-indigo-200">Mapeamento Determinístico / Fixed-NAT (Multi-Vendor: MikroTik & A10)</p>
+                    <p class="text-xs text-indigo-200">Mapeamento Determinístico / Fixed-NAT (Multi-Vendor: MikroTik & A10 ACOS)</p>
                 </div>
             </div>
             <span class="bg-indigo-800 text-indigo-200 text-xs px-3 py-1 rounded-full border border-indigo-600 font-medium hidden sm:inline-block">
@@ -88,37 +87,37 @@
                     </label>
                     <select id="devicePlatform" onchange="togglePlatformFields()" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 text-sm bg-white font-medium">
                         <option value="mikrotik" selected>MikroTik RouterOS</option>
-                        <option value="a10">A10 Networks (Thunder/AX)</option>
+                        <option value="a10">A10 Networks (Thunder / ACOS)</option>
                     </select>
-                    <p class="text-xs text-slate-500 mt-1">Sintaxe de regras e scripts gerados.</p>
+                    <p class="text-xs text-slate-500 mt-1">Algoritmo de alocação e CLI gerada.</p>
                 </div>
 
                 <!-- Internal IP / Subnet -->
                 <div>
                     <label for="privateSubnet" class="block text-sm font-medium text-slate-700 mb-1">
-                        Rede Privada CGNAT (LAN)
+                        Rede Privada CGNAT (Inside)
                     </label>
                     <div class="relative">
-                        <input type="text" id="privateSubnet" value="100.64.0.0/18" placeholder="Ex: 100.64.0.0/18" 
+                        <input type="text" id="privateSubnet" value="100.64.0.0/18" placeholder="Ex: 100.73.0.1-100.73.127.255 ou /17" 
                                class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Sua rede CGNAT interna (RFC 6598 ou 10.x/172.x/192.168.x).</p>
+                    <p class="text-xs text-slate-500 mt-1">Aceita CIDR (<code>/17</code>) ou Range (<code>IP_INI-IP_FIM</code>).</p>
                 </div>
 
                 <!-- Public IP / Subnet -->
                 <div>
                     <label for="publicSubnet" class="block text-sm font-medium text-slate-700 mb-1">
-                        Bloco Público / Pool (WAN)
+                        Bloco(s) Público(s) / Pool (NAT)
                     </label>
                     <div class="relative">
-                        <input type="text" id="publicSubnet" value="203.0.113.0/24" placeholder="Ex: 203.0.113.0/24 ou /23, /22..." 
+                        <input type="text" id="publicSubnet" value="203.0.113.0/24" placeholder="Ex: 45.185.157.0/24, 192.141.217.0/24" 
                                class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Suporta qualquer máscara CIDR (sem limite /24).</p>
+                    <p class="text-xs text-slate-500 mt-1">Múltiplos blocos/ranges separados por vírgula.</p>
                 </div>
 
-                <!-- Ratio Selection (Clients per Public IP) -->
-                <div>
+                <!-- Ratio Selection (Clients per Public IP - MikroTik) -->
+                <div class="mtk-field">
                     <label for="ratioSelect" class="block text-sm font-medium text-slate-700 mb-1">
                         Clientes por IP Público
                     </label>
@@ -131,7 +130,19 @@
                         <option value="128">128 Clientes (~500 portas) *Não Recomendado</option>
                         <option value="256">256 Clientes (~250 portas) *Não Recomendado</option>
                     </select>
-                    <p class="text-xs text-slate-500 mt-1">Proporção por IP público público.</p>
+                    <p class="text-xs text-slate-500 mt-1">Proporção fixa por IP público (MikroTik).</p>
+                </div>
+
+                <!-- A10 Allocation Method -->
+                <div class="a10-field hidden">
+                    <label for="a10Method" class="block text-sm font-medium text-slate-700 mb-1">
+                        Método de Alocação (A10 ACOS)
+                    </label>
+                    <select id="a10Method" class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 text-sm bg-white">
+                        <option value="use-all-nat-ips" selected>use-all-nat-ips (Intercalado / Padrão)</option>
+                        <option value="use-least-nat-ips">use-least-nat-ips (Sequencial por IP)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">Ratio e portas calculados automaticamente pelos pools.</p>
                 </div>
 
                 <!-- Starting Port Field -->
@@ -142,6 +153,25 @@
                     <input type="number" id="startPort" value="1024" min="1" max="65535" 
                            class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 font-mono text-sm" required>
                     <p class="text-xs text-slate-500 mt-1">Início da alocação (padrão: 1024).</p>
+                </div>
+
+                <!-- A10 Pool & Partition Names -->
+                <div class="a10-field hidden">
+                    <label for="a10InsideListName" class="block text-sm font-medium text-slate-700 mb-1">
+                        Nome IP-List Inside (A10)
+                    </label>
+                    <input type="text" id="a10InsideListName" value="Inside_Pool01" 
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm">
+                    <p class="text-xs text-slate-500 mt-1">Identificador da lista de usuários internos.</p>
+                </div>
+
+                <div class="a10-field hidden">
+                    <label for="a10NatListName" class="block text-sm font-medium text-slate-700 mb-1">
+                        Nome IP-List NAT Público (A10)
+                    </label>
+                    <input type="text" id="a10NatListName" value="Public_Pool01" 
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 font-mono text-sm">
+                    <p class="text-xs text-slate-500 mt-1">Identificador do pool público de tradução.</p>
                 </div>
 
                 <!-- MikroTik RouterOS Version -->
@@ -277,15 +307,15 @@
                     <p id="statPortsPerUser" class="text-xl font-bold text-brand-600 font-mono mt-1">0</p>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <p class="text-xs text-slate-500">Capacidade Atendida</p>
+                    <p id="statFourthLabel" class="text-xs text-slate-500">Capacidade Atendida</p>
                     <p id="statCapacity" class="text-xl font-bold text-slate-800 font-mono mt-1">0%</p>
                 </div>
             </div>
             
-            <!-- Warning Banner (If private IPs exceed public capacity) -->
+            <!-- Warning Banner -->
             <div id="capacityWarning" class="hidden mt-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm flex items-center gap-2">
                 <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0"></i>
-                <span><strong>Atenção:</strong> A quantidade de IPs privados é superior à capacidade total de portas do pool público fornecido. Apenas a quantidade suportada foi mapeada.</span>
+                <span id="capacityWarningText"><strong>Atenção:</strong> A quantidade de IPs privados é superior à capacidade total de portas do pool público fornecido. Apenas a quantidade suportada foi mapeada.</span>
             </div>
         </div>
 
@@ -312,7 +342,7 @@
 
                     <!-- Search Input -->
                     <div id="searchContainer" class="relative w-full sm:w-64">
-                        <input type="text" id="searchInput" placeholder="Ex: 191.7.202.149:10718, IP ou Porta..." 
+                        <input type="text" id="searchInput" placeholder="Ex: 45.185.157.0:1200, IP ou Porta..." 
                                class="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
                         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
                     </div>
@@ -350,7 +380,6 @@
                                         <i id="filterIcon_publicIp" data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i>
                                     </button>
                                 </div>
-                                <!-- Filter Dropdown Menu -->
                                 <div id="filterMenu_publicIp" class="hidden absolute left-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-lg filter-dropdown p-3 z-30 font-normal text-slate-700 shadow-xl normal-case">
                                     <div class="text-xs font-semibold text-slate-500 mb-2">Filtrar por IP Público</div>
                                     <input type="text" id="filterSearch_publicIp" placeholder="Procurar valor..." oninput="renderFilterCheckboxes('publicIp')" class="w-full px-2 py-1 text-xs border border-slate-300 rounded mb-2 focus:outline-none focus:border-brand-500">
@@ -358,9 +387,7 @@
                                         <button type="button" onclick="selectAllFilter('publicIp', true)" class="hover:underline">Selecionar Todos</button>
                                         <button type="button" onclick="selectAllFilter('publicIp', false)" class="hover:underline">Limpar</button>
                                     </div>
-                                    <div id="filterOptions_publicIp" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono">
-                                        <!-- Dynamic Checkboxes -->
-                                    </div>
+                                    <div id="filterOptions_publicIp" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono"></div>
                                     <div class="flex justify-end gap-2 border-t border-slate-100 pt-2">
                                         <button type="button" onclick="closeFilterMenu('publicIp')" class="px-2.5 py-1 text-xs border border-slate-300 rounded text-slate-600 hover:bg-slate-50">Cancelar</button>
                                         <button type="button" onclick="applyColumnFilter('publicIp')" class="px-2.5 py-1 text-xs bg-brand-600 text-white rounded hover:bg-brand-700 font-medium">Aplicar</button>
@@ -379,7 +406,6 @@
                                         <i id="filterIcon_portRange" data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i>
                                     </button>
                                 </div>
-                                <!-- Filter Dropdown Menu -->
                                 <div id="filterMenu_portRange" class="hidden absolute left-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-lg filter-dropdown p-3 z-30 font-normal text-slate-700 shadow-xl normal-case">
                                     <div class="text-xs font-semibold text-slate-500 mb-2">Filtrar por Faixa de Portas</div>
                                     <input type="text" id="filterSearch_portRange" placeholder="Procurar faixa..." oninput="renderFilterCheckboxes('portRange')" class="w-full px-2 py-1 text-xs border border-slate-300 rounded mb-2 focus:outline-none focus:border-brand-500">
@@ -387,9 +413,7 @@
                                         <button type="button" onclick="selectAllFilter('portRange', true)" class="hover:underline">Selecionar Todos</button>
                                         <button type="button" onclick="selectAllFilter('portRange', false)" class="hover:underline">Limpar</button>
                                     </div>
-                                    <div id="filterOptions_portRange" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono">
-                                        <!-- Dynamic Checkboxes -->
-                                    </div>
+                                    <div id="filterOptions_portRange" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono"></div>
                                     <div class="flex justify-end gap-2 border-t border-slate-100 pt-2">
                                         <button type="button" onclick="closeFilterMenu('portRange')" class="px-2.5 py-1 text-xs border border-slate-300 rounded text-slate-600 hover:bg-slate-50">Cancelar</button>
                                         <button type="button" onclick="applyColumnFilter('portRange')" class="px-2.5 py-1 text-xs bg-brand-600 text-white rounded hover:bg-brand-700 font-medium">Aplicar</button>
@@ -408,7 +432,6 @@
                                         <i id="filterIcon_privateIp" data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i>
                                     </button>
                                 </div>
-                                <!-- Filter Dropdown Menu -->
                                 <div id="filterMenu_privateIp" class="hidden absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-lg filter-dropdown p-3 z-30 font-normal text-slate-700 shadow-xl normal-case">
                                     <div class="text-xs font-semibold text-slate-500 mb-2">Filtrar por IP Privado</div>
                                     <input type="text" id="filterSearch_privateIp" placeholder="Procurar valor..." oninput="renderFilterCheckboxes('privateIp')" class="w-full px-2 py-1 text-xs border border-slate-300 rounded mb-2 focus:outline-none focus:border-brand-500">
@@ -416,9 +439,7 @@
                                         <button type="button" onclick="selectAllFilter('privateIp', true)" class="hover:underline">Selecionar Todos</button>
                                         <button type="button" onclick="selectAllFilter('privateIp', false)" class="hover:underline">Limpar</button>
                                     </div>
-                                    <div id="filterOptions_privateIp" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono">
-                                        <!-- Dynamic Checkboxes -->
-                                    </div>
+                                    <div id="filterOptions_privateIp" class="max-h-40 overflow-y-auto space-y-1 text-xs mb-3 font-mono"></div>
                                     <div class="flex justify-end gap-2 border-t border-slate-100 pt-2">
                                         <button type="button" onclick="closeFilterMenu('privateIp')" class="px-2.5 py-1 text-xs border border-slate-300 rounded text-slate-600 hover:bg-slate-50">Cancelar</button>
                                         <button type="button" onclick="applyColumnFilter('privateIp')" class="px-2.5 py-1 text-xs bg-brand-600 text-white rounded hover:bg-brand-700 font-medium">Aplicar</button>
@@ -428,7 +449,6 @@
                         </tr>
                     </thead>
                     <tbody id="mapTableBody" class="divide-y divide-slate-200 text-sm font-mono">
-                        <!-- Dynamic Rows Injected Here -->
                     </tbody>
                 </table>
             </div>
@@ -465,30 +485,27 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        Gerador de Mapa de CGNAT MikroTik RouterOS (Suporte a múltiplos /24, /23, /22)
+        Gerador de Mapa de CGNAT Determinístico — MikroTik RouterOS & A10 Networks ACOS
     </footer>
 
     <!-- Logic Scripts -->
     <script>
-        // Global State & Cache
         let generatedMapData = [];
         let activeFilteredData = [];
+        let parsedPoolsMeta = { privateSegments: [], publicSegments: [], usersPerNatIp: 0, portsPerUser: 0 };
         const RENDER_LIMIT = 2000;
         let currentTab = 'table';
 
-        // Sorting & Column Filtering State
         let currentSort = { column: 'id', direction: 'asc' };
         let columnFilters = {
-            publicIp: null,   // null = all selected, or Set of selected values
+            publicIp: null,
             portRange: null,
             privateIp: null
         };
 
-        // Initialize Lucide Icons & Handlers
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             
-            // Set initial trigger
             document.getElementById('cgnatForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 calculateCGNATMap();
@@ -498,7 +515,6 @@
             document.getElementById('btnExportCsv').addEventListener('click', exportToCSV);
             document.getElementById('searchInput').addEventListener('input', applyAllFiltersAndSearch);
 
-            // Global click handler to close filter menus when clicking outside
             document.addEventListener('click', (e) => {
                 const fields = ['publicIp', 'portRange', 'privateIp'];
                 fields.forEach(field => {
@@ -515,75 +531,60 @@
             togglePlatformFields();
         });
 
-        // Toggle visibility of fields specific to MikroTik or A10
         function togglePlatformFields() {
             const platform = document.getElementById('devicePlatform').value;
             const mtkFields = document.querySelectorAll('.mtk-field');
+            const a10Fields = document.querySelectorAll('.a10-field');
+
             if (platform === 'mikrotik') {
                 mtkFields.forEach(el => el.classList.remove('hidden'));
+                a10Fields.forEach(el => el.classList.add('hidden'));
             } else {
                 mtkFields.forEach(el => el.classList.add('hidden'));
+                a10Fields.forEach(el => el.classList.remove('hidden'));
             }
         }
 
-        // Field Enabling/Disabling Logic
         function dis_able_interface() {
             const opt = document.getElementById('cgnatInterfaceOption').value;
             const input = document.getElementById('cgnatInterfaceName');
-            if (opt === 'n') {
-                input.disabled = true;
-                input.classList.add('bg-slate-100');
-            } else {
-                input.disabled = false;
-                input.classList.remove('bg-slate-100');
-            }
+            input.disabled = (opt === 'n');
+            input.classList.toggle('bg-slate-100', opt === 'n');
         }
 
         function dis_able_uplink() {
             const opt = document.getElementById('uplinkOption').value;
             const input = document.getElementById('uplinkName');
-            if (opt === 'n') {
-                input.disabled = true;
-                input.classList.add('bg-slate-100');
-            } else {
-                input.disabled = false;
-                input.classList.remove('bg-slate-100');
-            }
+            input.disabled = (opt === 'n');
+            input.classList.toggle('bg-slate-100', opt === 'n');
         }
 
         function dis_able_ignore() {
             const opt = document.getElementById('ignoreOption').value;
             const dataInput = document.getElementById('ignoreData');
             const chk = document.getElementById('ignoreNoTrack');
-            if (opt === 'n') {
-                dataInput.disabled = true;
-                dataInput.classList.add('bg-slate-100');
-                chk.disabled = true;
-            } else {
-                dataInput.disabled = false;
-                dataInput.classList.remove('bg-slate-100');
-                chk.disabled = false;
-            }
+            dataInput.disabled = (opt === 'n');
+            dataInput.classList.toggle('bg-slate-100', opt === 'n');
+            chk.disabled = (opt === 'n');
         }
 
         function dis_able_blackhole() {
             const opt = document.getElementById('blackholeOption').value;
             const input = document.getElementById('blackholeInterface');
-            if (opt === 'e') {
-                input.disabled = false;
-                input.classList.remove('bg-slate-100');
-            } else {
-                input.disabled = true;
-                input.classList.add('bg-slate-100');
-            }
+            input.disabled = (opt !== 'e');
+            input.classList.toggle('bg-slate-100', opt !== 'e');
         }
 
-        // Convert IP String to 32-bit Integer
+        function isValidIp(ip) {
+            const parts = ip.trim().split('.');
+            if (parts.length !== 4) return false;
+            return parts.every(p => /^\d+$/.test(p) && parseInt(p, 10) >= 0 && parseInt(p, 10) <= 255);
+        }
+
         function ipToInt(ip) {
-            return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+            return ip.trim().split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
         }
 
-        // Convert 32-bit Integer back to IP String
         function intToIp(int) {
             return [
                 (int >>> 24) & 255,
@@ -593,88 +594,255 @@
             ].join('.');
         }
 
-        // Parse CIDR notation (e.g. "100.64.0.0/18") into start, end, total count and mask
-        function parseCIDR(cidrStr) {
-            const cleanCidr = cidrStr.trim();
-            const parts = cleanCidr.split('/');
-            if (parts.length !== 2) return null;
+        /**
+         * Parses comma-separated CIDRs and/or IP ranges (e.g., "45.185.157.0/24, 192.141.217.0-192.141.217.255")
+         * Supports A10 syntax "IP1 to IP2" as well as "IP1-IP2" and CIDR.
+         */
+        function parseIpPoolInput(inputStr) {
+            const tokens = inputStr.split(',').map(t => t.trim()).filter(Boolean);
+            if (tokens.length === 0) return null;
 
-            const ipStr = parts[0];
-            const maskBits = parseInt(parts[1], 10);
+            const segments = [];
+            let totalCount = 0;
 
-            if (isNaN(maskBits) || maskBits < 0 || maskBits > 32) return null;
+            for (const token of tokens) {
+                if (token.includes('/')) {
+                    const parts = token.split('/');
+                    if (parts.length !== 2 || !isValidIp(parts[0])) return null;
+                    const maskBits = parseInt(parts[1], 10);
+                    if (isNaN(maskBits) || maskBits < 0 || maskBits > 32) return null;
 
-            const ipInt = ipToInt(ipStr);
-            const mask = maskBits === 0 ? 0 : (~0 << (32 - maskBits)) >>> 0;
-            const networkInt = (ipInt & mask) >>> 0;
-            const totalIPs = Math.pow(2, 32 - maskBits);
+                    const ipInt = ipToInt(parts[0]);
+                    const mask = maskBits === 0 ? 0 : (~0 << (32 - maskBits)) >>> 0;
+                    const networkInt = (ipInt & mask) >>> 0;
+                    const count = Math.pow(2, 32 - maskBits);
+                    const endInt = (networkInt + count - 1) >>> 0;
 
-            return {
-                networkIp: intToIp(networkInt),
-                startInt: networkInt,
-                endInt: networkInt + totalIPs - 1,
-                total: totalIPs,
-                maskBits: maskBits
-            };
+                    segments.push({
+                        startInt: networkInt,
+                        endInt: endInt,
+                        count: count,
+                        startIp: intToIp(networkInt),
+                        endIp: intToIp(endInt),
+                        raw: token
+                    });
+                    totalCount += count;
+                } else if (token.includes('-') || /\s+to\s+/i.test(token)) {
+                    const rangeParts = token.includes('-')
+                        ? token.split('-').map(s => s.trim())
+                        : token.split(/\s+to\s+/i).map(s => s.trim());
+
+                    if (rangeParts.length !== 2 || !isValidIp(rangeParts[0]) || !isValidIp(rangeParts[1])) return null;
+
+                    const startInt = ipToInt(rangeParts[0]);
+                    const endInt = ipToInt(rangeParts[1]);
+                    if (endInt < startInt) return null;
+
+                    const count = (endInt - startInt) + 1;
+                    segments.push({
+                        startInt: startInt,
+                        endInt: endInt,
+                        count: count,
+                        startIp: intToIp(startInt),
+                        endIp: intToIp(endInt),
+                        raw: `${intToIp(startInt)} to ${intToIp(endInt)}`
+                    });
+                    totalCount += count;
+                } else if (isValidIp(token)) {
+                    const ipInt = ipToInt(token);
+                    segments.push({
+                        startInt: ipInt,
+                        endInt: ipInt,
+                        count: 1,
+                        startIp: token,
+                        endIp: token,
+                        raw: token
+                    });
+                    totalCount += 1;
+                } else {
+                    return null;
+                }
+            }
+
+            return { segments, total: totalCount };
         }
 
-        // Map Calculation Logic (Ordering logic: iterates through private block mapped to public IPs & port blocks)
+        // Helper to resolve the N-th IP integer from multi-segment pool without allocating huge IP arrays
+        function getIpIntAtOffset(segments, offset) {
+            let remaining = offset;
+            for (let i = 0; i < segments.length; i++) {
+                if (remaining < segments[i].count) {
+                    return (segments[i].startInt + remaining) >>> 0;
+                }
+                remaining -= segments[i].count;
+            }
+            return null;
+        }
+
+        // Core Deterministic Calculation (Supports MikroTik Sequential and A10 ACOS Striped/Dynamic Ratio)
         function calculateCGNATMap() {
+            const platform = document.getElementById('devicePlatform').value;
             const privateSubnetInput = document.getElementById('privateSubnet').value;
             const publicSubnetInput = document.getElementById('publicSubnet').value;
-            const ratio = parseInt(document.getElementById('ratioSelect').value, 10);
             const startPort = parseInt(document.getElementById('startPort').value, 10);
 
-            const privateRange = parseCIDR(privateSubnetInput);
-            const publicRange = parseCIDR(publicSubnetInput);
-
-            if (!privateRange) {
-                showToast('Prefixo de Rede Privada inválido!', 'alert-circle', 'text-amber-400');
+            if (isNaN(startPort) || startPort < 1 || startPort > 65534) {
+                showToast('Porta inicial inválida!', 'alert-circle', 'text-amber-400');
                 return;
             }
 
-            if (!publicRange) {
-                showToast('Prefixo Público inválido!', 'alert-circle', 'text-amber-400');
+            const privatePool = parseIpPoolInput(privateSubnetInput);
+            const publicPool = parseIpPoolInput(publicSubnetInput);
+
+            if (!privatePool) {
+                showToast('Rede Privada inválida! Use CIDR (ex: 100.64.0.0/18) ou Range (100.73.0.1-100.73.127.255).', 'alert-circle', 'text-amber-400');
                 return;
             }
 
-            // Calculation of Ports per User: (65536 - startPort) / ratio
+            if (!publicPool) {
+                showToast('Bloco Público inválido! Use CIDR ou Ranges separados por vírgula.', 'alert-circle', 'text-amber-400');
+                return;
+            }
+
             const availablePortsPerIp = 65536 - startPort;
-            const portsPerUser = Math.floor(availablePortsPerIp / ratio);
-
-            // Max Capacity Calculation
-            const maxPrivatesSupported = publicRange.total * ratio;
-            const actualPrivateToMap = Math.min(privateRange.total, maxPrivatesSupported);
-
-            // Sequential Mappings Generation
             generatedMapData = [];
-            let currentPrivInt = privateRange.startInt;
 
-            for (let pubIdx = 0; pubIdx < publicRange.total; pubIdx++) {
-                const currentPubIpStr = intToIp(publicRange.startInt + pubIdx);
+            if (platform === 'mikrotik') {
+                const ratio = parseInt(document.getElementById('ratioSelect').value, 10);
+                const portsPerUser = Math.floor(availablePortsPerIp / ratio);
+                const maxPrivatesSupported = publicPool.total * ratio;
+                const actualPrivateToMap = Math.min(privatePool.total, maxPrivatesSupported);
 
-                for (let blockIdx = 0; blockIdx < ratio; blockIdx++) {
+                let privOffset = 0;
+                for (let pubIdx = 0; pubIdx < publicPool.total; pubIdx++) {
+                    const currentPubIpInt = getIpIntAtOffset(publicPool.segments, pubIdx);
+                    const currentPubIpStr = intToIp(currentPubIpInt);
+
+                    for (let blockIdx = 0; blockIdx < ratio; blockIdx++) {
+                        if (generatedMapData.length >= actualPrivateToMap) break;
+
+                        const pStart = startPort + (blockIdx * portsPerUser);
+                        const pEnd = pStart + portsPerUser - 1;
+                        const currentPrivIpInt = getIpIntAtOffset(privatePool.segments, privOffset);
+                        const privIpStr = intToIp(currentPrivIpInt);
+
+                        generatedMapData.push({
+                            id: generatedMapData.length + 1,
+                            publicIp: currentPubIpStr,
+                            publicIpInt: currentPubIpInt,
+                            pStart: pStart,
+                            pEnd: pEnd,
+                            portRange: `${pStart}-${pEnd}`,
+                            privateIp: privIpStr,
+                            privateIpInt: currentPrivIpInt
+                        });
+
+                        privOffset++;
+                    }
                     if (generatedMapData.length >= actualPrivateToMap) break;
-
-                    const pStart = startPort + (blockIdx * portsPerUser);
-                    const pEnd = pStart + portsPerUser - 1;
-                    const privIpStr = intToIp(currentPrivInt);
-
-                    generatedMapData.push({
-                        id: generatedMapData.length + 1,
-                        publicIp: currentPubIpStr,
-                        publicIpInt: publicRange.startInt + pubIdx,
-                        pStart: pStart,
-                        pEnd: pEnd,
-                        portRange: `${pStart}-${pEnd}`,
-                        privateIp: privIpStr,
-                        privateIpInt: currentPrivInt
-                    });
-
-                    currentPrivInt++;
                 }
 
-                if (generatedMapData.length >= actualPrivateToMap) break;
+                parsedPoolsMeta = {
+                    privateSegments: privatePool.segments,
+                    publicSegments: publicPool.segments,
+                    usersPerNatIp: ratio,
+                    portsPerUser: portsPerUser
+                };
+
+                document.getElementById('statPortsPerUser').textContent = portsPerUser.toLocaleString();
+                document.getElementById('statFourthLabel').textContent = 'Capacidade Atendida';
+                const capacityPercent = Math.min(100, ((privatePool.total / maxPrivatesSupported) * 100)).toFixed(1);
+                document.getElementById('statCapacity').textContent = `${capacityPercent}%`;
+
+                const warningEl = document.getElementById('capacityWarning');
+                if (privatePool.total > maxPrivatesSupported) {
+                    document.getElementById('capacityWarningText').innerHTML = '<strong>Atenção:</strong> A quantidade de IPs privados é superior à capacidade total de portas do pool público fornecido. Apenas a quantidade suportada foi mapeada.';
+                    warningEl.classList.remove('hidden');
+                } else {
+                    warningEl.classList.add('hidden');
+                }
+
+            } else {
+                // A10 Networks ACOS Fixed-NAT Calculation
+                // Users per Public IP is dynamically calculated from total Inside IPs / total NAT IPs
+                const a10Method = document.getElementById('a10Method').value;
+                const usersPerNatIp = Math.ceil(privatePool.total / publicPool.total);
+                const portsPerUser = Math.floor(availablePortsPerIp / usersPerNatIp);
+
+                if (portsPerUser < 1) {
+                    showToast('Pool público insuficiente para alocar pelo menos 1 porta por usuário!', 'alert-circle', 'text-amber-400');
+                    return;
+                }
+
+                if (a10Method === 'use-all-nat-ips') {
+                    // Striped / Interleaved distribution across all NAT IPs:
+                    // Inside User index `i` maps to:
+                    //   natIpIndex = i % totalPublicIPs
+                    //   portBlockIndex = Math.floor(i / totalPublicIPs)
+                    for (let i = 0; i < privatePool.total; i++) {
+                        const natIpIndex = i % publicPool.total;
+                        const portBlockIndex = Math.floor(i / publicPool.total);
+
+                        const currentPubIpInt = getIpIntAtOffset(publicPool.segments, natIpIndex);
+                        const currentPrivIpInt = getIpIntAtOffset(privatePool.segments, i);
+
+                        const pStart = startPort + (portBlockIndex * portsPerUser);
+                        const pEnd = pStart + portsPerUser - 1;
+
+                        generatedMapData.push({
+                            id: i + 1,
+                            publicIp: intToIp(currentPubIpInt),
+                            publicIpInt: currentPubIpInt,
+                            pStart: pStart,
+                            pEnd: pEnd,
+                            portRange: `${pStart}-${pEnd}`,
+                            privateIp: intToIp(currentPrivIpInt),
+                            privateIpInt: currentPrivIpInt
+                        });
+                    }
+                } else {
+                    // use-least-nat-ips: Fills all port blocks of NAT IP 0 before moving to NAT IP 1
+                    for (let i = 0; i < privatePool.total; i++) {
+                        const natIpIndex = Math.floor(i / usersPerNatIp);
+                        const portBlockIndex = i % usersPerNatIp;
+
+                        const currentPubIpInt = getIpIntAtOffset(publicPool.segments, natIpIndex);
+                        const currentPrivIpInt = getIpIntAtOffset(privatePool.segments, i);
+
+                        const pStart = startPort + (portBlockIndex * portsPerUser);
+                        const pEnd = pStart + portsPerUser - 1;
+
+                        generatedMapData.push({
+                            id: i + 1,
+                            publicIp: intToIp(currentPubIpInt),
+                            publicIpInt: currentPubIpInt,
+                            pStart: pStart,
+                            pEnd: pEnd,
+                            portRange: `${pStart}-${pEnd}`,
+                            privateIp: intToIp(currentPrivIpInt),
+                            privateIpInt: currentPrivIpInt
+                        });
+                    }
+                }
+
+                parsedPoolsMeta = {
+                    privateSegments: privatePool.segments,
+                    publicSegments: publicPool.segments,
+                    usersPerNatIp: usersPerNatIp,
+                    portsPerUser: portsPerUser
+                };
+
+                document.getElementById('statPortsPerUser').textContent = portsPerUser.toLocaleString();
+                document.getElementById('statFourthLabel').textContent = 'Proporção (Clientes/IP)';
+                document.getElementById('statCapacity').textContent = `1:${usersPerNatIp}`;
+
+                const warningEl = document.getElementById('capacityWarning');
+                if (portsPerUser < 500) {
+                    document.getElementById('capacityWarningText').innerHTML = `<strong>Alerta de Densidade A10:</strong> Cada assinante receberá apenas <strong>${portsPerUser} portas</strong> (1:${usersPerNatIp}). Recomenda-se manter ao menos 500–1000 portas por cliente.`;
+                    warningEl.classList.remove('hidden');
+                } else {
+                    warningEl.classList.add('hidden');
+                }
             }
 
             // Reset filters & sort
@@ -684,37 +852,20 @@
             updateSortIcons();
 
             // Update Summary Stats
-            document.getElementById('statTotalPrivate').textContent = privateRange.total.toLocaleString();
-            document.getElementById('statTotalPublic').textContent = publicRange.total.toLocaleString();
-            document.getElementById('statPortsPerUser').textContent = portsPerUser.toLocaleString();
-            
-            const capacityPercent = Math.min(100, ((privateRange.total / maxPrivatesSupported) * 100)).toFixed(1);
-            document.getElementById('statCapacity').textContent = `${capacityPercent}%`;
-
-            // Display Capacity Warning if overloaded
-            const warningEl = document.getElementById('capacityWarning');
-            if (privateRange.total > maxPrivatesSupported) {
-                warningEl.classList.remove('hidden');
-            } else {
-                warningEl.classList.add('hidden');
-            }
+            document.getElementById('statTotalPrivate').textContent = privatePool.total.toLocaleString();
+            document.getElementById('statTotalPublic').textContent = publicPool.total.toLocaleString();
 
             // Unhide UI sections
             document.getElementById('statsCard').classList.remove('hidden');
             document.getElementById('outputSection').classList.remove('hidden');
 
-            // Reset search input on recalculation
             document.getElementById('searchInput').value = '';
 
-            // Generate Device Script
             generateScript();
-
-            // Render Table Rows
             applyAllFiltersAndSearch();
-            showToast(`Mapa gerado com ${generatedMapData.length.toLocaleString()} regras/mapeamentos!`, 'check-circle', 'text-emerald-400');
+            showToast(`Mapa gerado com ${generatedMapData.length.toLocaleString()} mapeamentos!`, 'check-circle', 'text-emerald-400');
         }
 
-        // Tab Switching Logic
         function switchViewTab(tab) {
             currentTab = tab;
             const btnTable = document.getElementById('tabBtnTable');
@@ -741,7 +892,6 @@
             }
         }
 
-        // Script Generator for MikroTik and A10
         function generateScript() {
             if (!generatedMapData || generatedMapData.length === 0) return;
 
@@ -761,7 +911,6 @@
                 const uplinkName = document.getElementById('uplinkName').value.trim();
                 const ignoreOpt = document.getElementById('ignoreOption').value;
                 const ignoreData = document.getElementById('ignoreData').value.trim();
-                const ignoreNoTrack = document.getElementById('ignoreNoTrack').checked;
                 const blackholeOpt = document.getElementById('blackholeOption').value;
                 const blackholeIf = document.getElementById('blackholeInterface').value.trim();
                 const jumpChain = document.getElementById('jumpChainName').value.trim() || 'CGNAT';
@@ -777,21 +926,22 @@
                 script += `# Total de Mapeamentos: ${generatedMapData.length}\n`;
                 script += `# ========================================================\n\n`;
 
-                // 1. Blackhole Route Setup
                 if (blackholeOpt !== 'n') {
                     script += `# Rota de Proteção de Loop / Blackhole\n`;
                     script += `/ip route\n`;
-                    if (blackholeOpt === 's') {
-                        script += `add dst-address=${publicSubnetInput} type=blackhole comment="CGNAT - Blackhole Block"\n`;
-                    } else if (blackholeOpt === 'i') {
-                        script += `add dst-address=${publicSubnetInput} type=unreachable comment="CGNAT - Unreachable Block"\n`;
-                    } else if (blackholeOpt === 'e' && blackholeIf) {
-                        script += `add dst-address=${publicSubnetInput} gateway=${blackholeIf} comment="CGNAT - Null Route"\n`;
-                    }
+                    parsedPoolsMeta.publicSegments.forEach(seg => {
+                        const dst = seg.raw.includes('/') ? seg.raw : `${seg.startIp}-${seg.endIp}`;
+                        if (blackholeOpt === 's') {
+                            script += `add dst-address=${dst} type=blackhole comment="CGNAT - Blackhole Block"\n`;
+                        } else if (blackholeOpt === 'i') {
+                            script += `add dst-address=${dst} type=unreachable comment="CGNAT - Unreachable Block"\n`;
+                        } else if (blackholeOpt === 'e' && blackholeIf) {
+                            script += `add dst-address=${dst} gateway=${blackholeIf} comment="CGNAT - Null Route"\n`;
+                        }
+                    });
                     script += `\n`;
                 }
 
-                // 2. Local Traffic Bypass / Ignore Rules
                 if (ignoreOpt !== 'n' && ignoreData) {
                     script += `# Regras de Bypass de Tráfego Local\n`;
                     script += `/ip firewall nat\n`;
@@ -807,7 +957,6 @@
                     script += `\n`;
                 }
 
-                // 3. Main Jump Rule into CGNAT Chain
                 script += `# Regra Jump para direcionar tráfego à Chain CGNAT\n`;
                 script += `/ip firewall nat\n`;
                 let jumpInAttr = '';
@@ -820,7 +969,6 @@
 
                 script += `add chain=srcnat action=jump jump-target=${jumpChain} src-address=${privateSubnetInput}${jumpInAttr}${jumpOutAttr} comment="CGNAT - Jump to ${jumpChain}"\n\n`;
 
-                // 4. Sequential SRC-NAT Rules (TCP and UDP)
                 script += `# Regras Determinísticas por Usuário/Porta\n`;
                 let extraOut = publicIfNat ? ` out-interface=${publicIfNat}` : '';
 
@@ -834,28 +982,43 @@
                 scriptArea.value = script;
 
             } else {
-                // A10 Networks CLI Generation
-                scriptTitleInfo.textContent = `Script A10 Networks (Thunder/AX CLI)`;
+                // A10 Networks ACOS CLI Generation
+                const insideListName = document.getElementById('a10InsideListName').value.trim() || 'Inside_Pool01';
+                const natListName = document.getElementById('a10NatListName').value.trim() || 'Public_Pool01';
+                const a10Method = document.getElementById('a10Method').value;
+
+                scriptTitleInfo.textContent = `Script A10 Networks ACOS (Thunder / AX CLI)`;
 
                 let script = `! ========================================================\n`;
-                script += `! CONFIGURACAO CGNAT FIXED-NAT A10 NETWORKS\n`;
-                script += `! Rede Privada: ${privateSubnetInput}\n`;
-                script += `! Bloco Público: ${publicSubnetInput}\n`;
+                script += `! CONFIGURACAO CGNAT FIXED-NAT A10 NETWORKS (ACOS)\n`;
+                script += `! Proporcao: 1:${parsedPoolsMeta.usersPerNatIp} (${parsedPoolsMeta.portsPerUser} portas/usuario)\n`;
+                script += `! Metodo: ${a10Method}\n`;
                 script += `! Data: ${new Date().toLocaleString('pt-BR')}\n`;
                 script += `! ========================================================\n\n`;
 
-                script += `cgnv6 nat pool pool-cgnat ${publicSubnetInput}\n`;
-                script += `cgnv6 fixed-nat instance cgnat-inst\n`;
-                script += ` inside-user ipv4 ${privateSubnetInput}\n`;
-                script += ` partition pool-cgnat\n`;
-                script += ` vrid 1\n`;
+                script += `ip-list ${insideListName}\n`;
+                parsedPoolsMeta.privateSegments.forEach(seg => {
+                    script += `  ${seg.startIp} to ${seg.endIp}\n`;
+                });
+                script += `!\n`;
 
-                scriptDesc.textContent = '* Configuração em bloco sintético para A10 Networks CLI.';
+                script += `ip-list ${natListName}\n`;
+                parsedPoolsMeta.publicSegments.forEach(seg => {
+                    script += `  ${seg.startIp} to ${seg.endIp}\n`;
+                });
+                script += `!\n`;
+
+                script += `cgnv6 fixed-nat inside ip-list ${insideListName} nat ip-list ${natListName} method ${a10Method}\n`;
+                script += `!\n`;
+                script += `! Comando de verificacao no equipamento:\n`;
+                script += `! show cgnv6 fixed-nat inside-user <IP_PRIVADO>\n`;
+                script += `! show cgnv6 fixed-nat nat-address <IP_PUBLICO>\n`;
+
+                scriptDesc.textContent = '* Sintaxe oficial A10 ACOS (ip-list + cgnv6 fixed-nat).';
                 scriptArea.value = script;
             }
         }
 
-        // Copy Script to Clipboard
         function copyScript() {
             const scriptArea = document.getElementById('scriptArea');
             if (!scriptArea.value) return;
@@ -865,13 +1028,15 @@
             showToast('Script copiado para a área de transferência!', 'copy', 'text-emerald-400');
         }
 
-        // Reset Form
         function resetForm() {
             document.getElementById('devicePlatform').value = 'mikrotik';
             document.getElementById('privateSubnet').value = '100.64.0.0/18';
             document.getElementById('publicSubnet').value = '203.0.113.0/24';
-            document.getElementById('ratioSelect').value = '16';
-            document.getElementById('startPort').value = '1000';
+            document.getElementById('ratioSelect').value = '64';
+            document.getElementById('a10Method').value = 'use-all-nat-ips';
+            document.getElementById('a10InsideListName').value = 'Inside_Pool01';
+            document.getElementById('a10NatListName').value = 'Public_Pool01';
+            document.getElementById('startPort').value = '1024';
             document.getElementById('rosVersionSelect').value = 'v7';
             document.getElementById('cgnatInterfaceOption').value = 'n';
             document.getElementById('cgnatInterfaceName').value = '';
@@ -905,11 +1070,9 @@
             showToast('Campos reiniciados para os valores padrão.', 'rotate-ccw', 'text-indigo-400');
         }
 
-        // Unified Sorting & Filtering Process
         function applyAllFiltersAndSearch() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
 
-            // Step 1: Search Filter
             let result = generatedMapData.filter(item => {
                 if (!query) return true;
 
@@ -937,14 +1100,12 @@
                 return matchesText || matchesPortRange;
             });
 
-            // Step 2: Spreadsheet Column Filters
             ['publicIp', 'portRange', 'privateIp'].forEach(field => {
                 if (columnFilters[field] !== null) {
                     result = result.filter(item => columnFilters[field].has(item[field]));
                 }
             });
 
-            // Step 3: Column Sorting
             result.sort((a, b) => {
                 let valA = a[currentSort.column];
                 let valB = b[currentSort.column];
@@ -961,7 +1122,6 @@
             renderTableRows(activeFilteredData);
         }
 
-        // Column Sorting Handler
         function handleSort(column) {
             if (currentSort.column === column) {
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -991,7 +1151,6 @@
             lucide.createIcons();
         }
 
-        // Toggle Column Filter Dropdown Menu
         function toggleFilterMenu(event, field) {
             event.stopPropagation();
             const menu = document.getElementById(`filterMenu_${field}`);
@@ -1011,7 +1170,6 @@
             if (menu) menu.classList.add('hidden');
         }
 
-        // Render Checkboxes in Spreadsheet Filter Dropdown
         function renderFilterCheckboxes(field) {
             const container = document.getElementById(`filterOptions_${field}`);
             const searchText = (document.getElementById(`filterSearch_${field}`).value || '').toLowerCase();
@@ -1019,17 +1177,15 @@
 
             const uniqueValues = Array.from(new Set(generatedMapData.map(item => item[field])));
 
-            if (field === 'publicIp') {
-                uniqueValues.sort((a, b) => ipToInt(a) - ipToInt(b));
-            } else if (field === 'privateIp') {
+            if (field === 'publicIp' || field === 'privateIp') {
                 uniqueValues.sort((a, b) => ipToInt(a) - ipToInt(b));
             } else {
-                uniqueValues.sort();
+                uniqueValues.sort((a, b) => parseInt(a.split('-')[0], 10) - parseInt(b.split('-')[0], 10));
             }
 
             const activeSet = columnFilters[field];
 
-            uniqueValues.forEach((val) => {
+            uniqueValues.slice(0, 500).forEach((val) => {
                 if (searchText && !String(val).toLowerCase().includes(searchText)) return;
 
                 const isChecked = activeSet === null || activeSet.has(val);
@@ -1044,13 +1200,11 @@
             });
         }
 
-        // Check/Uncheck All in Filter Menu
         function selectAllFilter(field, state) {
             const cbs = document.querySelectorAll(`.filter-cb-${field}`);
             cbs.forEach(cb => cb.checked = state);
         }
 
-        // Apply Selected Column Filter
         function applyColumnFilter(field) {
             const cbs = document.querySelectorAll(`.filter-cb-${field}`);
             const selectedValues = new Set();
@@ -1085,7 +1239,6 @@
             lucide.createIcons();
         }
 
-        // Render Table Rows
         function renderTableRows(data) {
             const tbody = document.getElementById('mapTableBody');
             tbody.innerHTML = '';
@@ -1123,7 +1276,6 @@
             lucide.createIcons();
         }
 
-        // CSV Export Function
         function exportToCSV() {
             const dataToExport = activeFilteredData.length > 0 ? activeFilteredData : generatedMapData;
 
@@ -1150,7 +1302,6 @@
             showToast('Download do arquivo CSV iniciado!', 'download', 'text-blue-400');
         }
 
-        // Toast Helper
         function showToast(message, iconName = 'check-circle', iconColorClass = 'text-emerald-400') {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
